@@ -3,6 +3,7 @@ from tensorflow.contrib import rnn
 from tensorflow.contrib.crf import crf_log_likelihood
 from tensorflow.contrib.layers.python.layers import initializers
 
+
 class BiLSTM_CRF():
     def __init__(self, embeddings, lstm_dim_=100, num_tags_=4, lr_=0.001):
         self.lstm_dim = lstm_dim_
@@ -22,7 +23,6 @@ class BiLSTM_CRF():
                                          initializers=self.initializer)
             self.loss = self.loss_layer(self.logits)
             self.train_step = tf.train.AdamOptimizer(self.lr).minimize(self.loss)
-
 
     def bilstm_layer(self):
         embed_ = tf.nn.embedding_lookup(self.embeddings, self.x_input)
@@ -44,15 +44,15 @@ class BiLSTM_CRF():
         x_in_ = tf.concat(outputs, axis=2)
         return x_in_
 
-    def project_layer(self):
+    def project_layer(self, x_in_):
         with tf.variable_scope("project"):
             with tf.variable_scope("hidden"):
-                w_tanh = tf.get_variable(name="w_tanh",shape=[self.lstm_dim*2, self.lstm_dim],
+                w_tanh = tf.get_variable(name="w_tanh", shape=[self.lstm_dim * 2, self.lstm_dim],
                                          initializers=self.initializer,
                                          regularizer=tf.contrib.layers.l2_regularizer(0.01))
                 b_tanh = tf.get_variable(name="b_tanh", shape=[self.lstm_dim],
                                          initializers=tf.zeros_initializer())
-                x_in_ = tf.reshape(tesor=x_in_, shape=[-1, self.lstm_dim*2])
+                x_in_ = tf.reshape(tesor=x_in_, shape=[-1, self.lstm_dim * 2])
                 output = tf.tanh(tf.add(tf.matmul(x_in_, w_tanh), b_tanh))
 
             with tf.variable_scope("output"):
@@ -65,7 +65,7 @@ class BiLSTM_CRF():
                 logits_ = tf.reshape(tensor=pred_, shape=[-1, self.num_tags, self.num_tags], name='logits')
         return logits_
 
-    def peoject_layer_single(self):
+    def peoject_layer_single(self, x_in_):
         with tf.variable_scope("output"):
             w_out = tf.get_variable(name="w_out", shape=[self.lstm_dim, self.num_tags],
                                     initializers=self.initializer,
@@ -77,10 +77,9 @@ class BiLSTM_CRF():
             logits_ = tf.reshape(tensor=pred_, shape=[-1, self.num_tags, self.num_tags], name='logits')
         return logits_
 
-    def loss_layer(self):
+    def loss_layer(self, project_logits):
         with tf.variable_scope("crf_loss"):
             log_likelihood, trans = crf_log_likelihood(input=project_logits, tag_indices=self.y_input,
                                                        transition_params=self.trans,
                                                        sequence_lengths=self.max_steps)
         return tf.reduce_mean(-log_likelihood)
-
